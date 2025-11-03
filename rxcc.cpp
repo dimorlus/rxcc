@@ -658,8 +658,12 @@ int main(int argc, char* argv[])
 
     //Read search string from command line
     char* cmd = GetCommandLineA();
+	//int l = (int)strlen(cmd);
+	//if (l && cmd[l - 1] == '"') cmd[l - 1] = '\0'; //trim last ")
 
-    nsplit(3, cmd, sstr, rxstr, repstr);
+
+    nsplit(4, cmd, sstr, rxstr, repstr, NULL);
+
 	if (strstr(cmd, "-p ")) pflag = true;
 	else
 	if (strstr(cmd, "-s ")) sflag = true;
@@ -676,7 +680,7 @@ int main(int argc, char* argv[])
     if (dbgflag)
     {
         printf("Options : -d=%d, -p=%d, -s=%d, -r=%d, -h=%d\n\n",
-            dbgflag, pflag, sflag, rxflag, helpflag);
+                dbgflag, pflag, sflag, rxflag, helpflag);
 	}
     if (sflag)
     {
