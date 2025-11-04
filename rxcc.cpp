@@ -53,10 +53,10 @@ int ssctst (char *dst, const char *sfmt, const char *str)
  } fmt;
 
 #ifdef _DYNAMIC_
-  void **arglist = NULL;
-  char *typelist = NULL;
-  char *fmtlist = NULL;
-  char** pstr = NULL;
+ void **arglist = NULL;
+ char *typelist = NULL;
+ char *fmtlist = NULL;
+ char **pstr = NULL;
 #else //_DYNAMIC_
  void* arglist[ARGSIZE] = { NULL };
  char typelist[ARGSIZE] = { 0 };
@@ -70,447 +70,450 @@ int ssctst (char *dst, const char *sfmt, const char *str)
 
 #ifdef _DYNAMIC_
  //make here 2 pass for count args and allocate memory
- for(int pass=0; pass<2; pass++)
+ for (int pass = 0; pass < 2; pass++)
 #endif //_DYNAMIC_
- {
+  {
 #ifdef _DYNAMIC_
-  if (pass == 1)
-   {
-       arglist = (void**)malloc((n + 1) * sizeof(void*));
-       typelist = (char*)malloc((n + 1) * sizeof(char));
-       fmtlist = (char*)malloc((n + 1) * sizeof(char));
-       pstr = (char**)malloc((n + 1) * sizeof(char*));
-       if (arglist) memset(arglist, 0, (n + 1) * sizeof(void*));
-       else return -1;
-       if (typelist) memset(typelist, 0, (n + 1) * sizeof(char));
-       else return -1;
-       if (fmtlist) memset(fmtlist, 0, (n + 1) * sizeof(char));
-       else return -1;
-       if (pstr) memset(pstr, 0, (n + 1) * sizeof(char*));
-       else return -1;
-       c = cc = '\0';
-       ii = n = pfsize = 0;
-   }
+   if (pass == 1)
+	{
+	 arglist = (void**) malloc((n + 1) * sizeof(void*));
+	 typelist = (char*) malloc((n + 1) * sizeof(char));
+	 fmtlist = (char*) malloc((n + 1) * sizeof(char));
+	 pstr = (char**) malloc((n + 1) * sizeof(char*));
+	 if (arglist) memset(arglist, 0, (n + 1) * sizeof(void*));
+	 else return -1;
+	 if (typelist) memset(typelist, 0, (n + 1) * sizeof(char));
+	 else return -1;
+	 if (fmtlist) memset(fmtlist, 0, (n + 1) * sizeof(char));
+	 else return -1;
+	 if (pstr) memset(pstr, 0, (n + 1) * sizeof(char*));
+	 else return -1;
+	 c = cc = '\0';
+	 ii = n = pfsize = 0;
+	}
 #endif //_DYNAMIC_
+   do
+	{
+	 open = false;
+	 percent = false;
+	 fmt = tNone;
+	 do
+	  {
+	   cc = c;
+	   c = sfmt[ii++];
+	   if (open)
+		{
+		 if (c == ']')
+		  {
+		   fmt = tString;
+		   c = 's';
+		   open = false;
+		   break;
+		  }
+		 else continue;
+		}
+	   if (percent)
+		{
+		 if (c == '%')
+		  {
+		   percent = false;
+		   continue;
+		  }
+		 else
+		 if (c == '*')
+		  {
+		   fmt = tNone;
+		   percent = false;
+		   continue;
+		  }
+		 else
+		 if ((c == 'f') || (c == 'e') || (c == 'E') || (c == 'g') || (c == 'G'))
+		  {
+		   fmt = tFloat;
+		   if (cc == 'l') fmt = tDouble;
+		   else
+		   if (cc == 'L') fmt = tExt;
+		   break;
+		  }
+		 else 
+		 if ((c == 'd') || (c == 'i') || (c == 'u') || (c == 'x') || (c == 'X') || (c == 'o'))
+		  {
+		   fmt = tInt;
+		   if (cc == 'L') fmt = ti64;
+		   else
+		   if (cc == 'l') fmt = tLong;
+		   else
+		   if (cc == 'h') fmt = tShort;
+		   break;
+		  }
+		 else 
+		 if ((c == 'D') || (c == 'I') || (c == 'U') || (c == 'O'))
+		  {
+		   fmt = tLong;
+		   c = tolower(c);
+		   break;
+		  }
+		 else
+		 if (c == 'c')
+		  {
+		   //fmt = tChar;
+		   fmt = tString;
+		   break;
+		  }
+		 else
+		 if (c == 's')
+		  {
+		   fmt = tString;
+		   break;
+		  }
+		 else
+		 if (c == '[')
+		  {
+		   open = true;
+		   continue;
+		  }
+		}
+	   else
+	   if (c == '%')
+		{
+		 percent = true;
+		 continue;
+		}
+	  }
+	 while (c);
+	 if (c && percent && fmt)
+	  {
+#ifdef _DYNAMIC_
+	   if (pass == 1)
+#endif //_DYNAMIC_
+		{
+		 typelist[n] = fmt;
+		 fmtlist[n] = c;
+		 pstr[n] = NULL;
+		 switch (fmt)
+		  {
+		  case tChar:
+		   arglist[n] = (void*) malloc(sizeof(char));
+		   *(char*) arglist[n] = '\0';
+		   pfsize += sizeof(char);
+		  break;
+		  case tShort:
+		   arglist[n] = (void*) malloc(sizeof(short));
+		   *(short*) arglist[n] = 0;
+		   pfsize += sizeof(short);
+		  break;
+		  case tInt:
+		   arglist[n] = (void*) malloc(sizeof(int));
+		   *(int*) arglist[n] = 0;
+		   pfsize += sizeof(int);
+		  break;
+		  case tLong:
+		   arglist[n] = (void*) malloc(sizeof(long));
+		   *(long*) arglist[n] = 0;
+		   pfsize += sizeof(long);
+		  break;
+		  case ti64:
+		   arglist[n] = (void*) malloc(sizeof(__int64));
+		   *(__int64*) arglist[n] = 0;
+		   pfsize += sizeof(__int64);
+		  break;
+		  case tFloat:
+		   arglist[n] = (void*) malloc(sizeof(float));
+		   *(float*) arglist[n] = 0.0;
+		   pfsize += sizeof(float);
+		  break;
+		  case tDouble:
+		   arglist[n] = (void*) malloc(sizeof(double));
+		   *(double*) arglist[n] = 0.0;
+		   pfsize += sizeof(double);
+		  break;
+		  case tExt:
+		   arglist[n] = (void*) malloc(sizeof(long double));
+		   *(long double*) arglist[n] = 0.0;
+		   pfsize += sizeof(long double);
+		  break;
+		  case tString:
+		   char *cp = (char*) malloc(BUFSIZE);
+		   arglist[n] = (void*) malloc(sizeof(char*));
+		   *(char**) arglist[n] = cp;
+		   pstr[n] = cp;
+		   memset(*(char**) arglist[n], 0, BUFSIZE);
+		   pfsize += sizeof(char*);
+		  break;
+		  }
+		}
+	   n++;
+	  }
+	}
+   while (c && (n < BUFSIZE));
+  } //end for pass
+
+ arglist[n] = (void*) malloc(sizeof(void*));
+
+ int nn = vsscanf(str, sfmt, (char*) arglist);
+
+ char *fdest = dst;
+ for (int i = 0; (i < n) && arglist[i]; i++)
+  {
+   switch (typelist[i])
+	{
+	case tChar:
+	 {
+	  char ci = *(char*) arglist[i];
+	  char fmt[] = {"%c, \0"};
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ci);
+	 }
+	break;
+	case tShort:
+	 {
+	  short si = *(short*) arglist[i];
+	  char fmt[] = {"%hd, \0"};
+	  fmt[2] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, si);
+	 }
+	break;
+	case tInt:
+	 {
+	  int ii = *(int*) arglist[i];
+	  char fmt[] = {"%d, \0"};
+	  fmt[1] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ii);
+	 }
+	break;
+	case tLong:
+	 {
+	  long li = *(long*) arglist[i];
+	  char fmt[] =  {"%ld, \0"};
+	  fmt[2] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, li);
+	 }
+	break;
+	case ti64:
+	 {
+	  __int64 Li = *(__int64*) arglist[i];
+	  char fmt[] = {"%Ld, \0"};
+	  fmt[2] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, Li);
+	 }
+	break;
+	case tFloat:
+	 {
+	  float ff = *(float*) arglist[i];
+	  char fmt[] = {"%f, \0"};
+	  fmt[1] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ff);
+	 }
+	break;
+	case tDouble:
+	 {
+	  double df = *(double*) arglist[i];
+	  char fmt[] = {"%lf, \0"};
+	  fmt[2] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, df);
+	 }
+	break;
+	case tExt:
+	 {
+	  long double lf = *(long double*) arglist[i];
+	  char fmt[] = {"%Lf, \0"};
+	  fmt[2] = fmtlist[i];
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, lf);
+	 }
+	break;
+	case tString:
+	 {
+	  char *ss = (char*) arglist[i];
+	  char fmt[] = {"%s, \0"};
+	  fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ss);
+	 }
+	break;
+	}
+  }
+ if (fdest > dst + 2) fdest[-2] = '\0'; //supress last ", "
+
+#ifdef _DYNAMIC_
+ for (int i = 0; i < n; i++)
+#else //_DYNAMIC_
+ for (int i = 0; i < ARGSIZE; i++)
+#endif //_DYNAMIC_
+  {
+   if (pstr[i])
+	{
+	 free(pstr[i]);
+	 pstr[i] = NULL;
+	}
+   if (arglist[i])
+	{
+	 free(arglist[i]);
+	 arglist[i] = NULL;
+	}
+  }
+#ifdef _DYNAMIC_
+ if (arglist) free(arglist);
+ if (typelist) free(typelist);
+ if (fmtlist) free(fmtlist);
+ if (pstr) free(pstr);
+#endif //_DYNAMIC_   
+ return nn;
+}
+//---------------------------------------------------------------------------
+//sprintf test utility function
+void sprtst (char *dst, char *sfmt, char *str)
+{
+ char pfmt[BUFSIZE];
+ char pstr[BUFSIZE];
+ enum ftypes
+ {
+  tNone, tShort, tInt, tLong, tInt64, tFloat, tDouble, tLongDouble, tString, tPtr
+ } fmt;
+ char c = '\0', cc = '\0';
+ int i;
+ bool flag;
+
+ char *pdst = dst; // Новый указатель для отслеживания позиции в dst
+
  do
   {
-   open = false;
-   percent = false;
+   i = 0;
+   flag = false;
    fmt = tNone;
    do
 	{
 	 cc = c;
-	 c = sfmt[ii++];
-	 if (open)
-	  {
-	   if ((c == ']'))
-		{
-		 fmt = tString;
-		 c = 's';
-		 open = false;
-		 break;
-		}
-	   else continue;
-	  }
-	 if (percent)
+	 c = pfmt[i++] = *sfmt++;
+	 pfmt[i] = '\0';
+	 if (c == '\0')
+	  break;
+	 if (flag)
 	  {
 	   if (c == '%')
 		{
-		 percent = false;
+		 flag = false;
 		 continue;
 		}
-	   else
-	   if (c == '*')
+	   else if ((c == 'f') || (c == 'e') || (c == 'E') || (c == 'g') || (c == 'G'))
 		{
-		 fmt = tNone;
-		 percent = false;
-		 continue;
-		}
-	   else
-	   if ((c == 'f') || (c == 'e') || (c == 'E') || (c == 'g') || (c == 'G'))
-		{
-		 fmt = tFloat;
 		 if (cc == 'l') fmt = tDouble;
-		 else
-		 if (cc == 'L') fmt = tExt;
+		 else if (cc == 'L') fmt = tLongDouble;
+		 else fmt = tFloat;
 		 break;
 		}
-	   else
-	   if ((c == 'd') || (c == 'i') || (c == 'u') ||
-	       (c == 'x') || (c == 'X') || (c == 'o'))
+	   else 
+	   if ((c == 'd') || (c == 'i') || (c == 'u') || (c == 'x')
+		 || (c == 'X') || (c == 'o') || (c == 'c'))
 		{
-		 fmt = tInt;
-		 if (cc == 'L') fmt = ti64;
+		 if (cc == 'l') fmt = tLong;
 		 else 
-                 if (cc == 'l')  fmt = tLong;
+		 if (cc == 'h') fmt = tShort;
 		 else 
-                 if (cc == 'h')  fmt = tShort;
+		 if (cc == 'L') fmt = tInt64;
+		 else fmt = tInt;
 		 break;
 		}
-	   else
-	   if ((c == 'D') || (c == 'I') || (c == 'U') || (c == 'O'))
+	   else 
+	   if ((c == 'n') || (c == 'p'))
 		{
-		 fmt = tLong;
-		 c = tolower(c);
+		 fmt = tPtr;
 		 break;
 		}
-	   else
-	   if (c == 'c')
-		{
-		 //fmt = tChar;
-		 fmt = tString;
-		 break;
-		}
-	   else
+	   else 
 	   if (c == 's')
 		{
 		 fmt = tString;
 		 break;
 		}
-	   else
-	   if (c == '[')
-		{
-		 open = true;
-		 continue;
-		}
+	   else continue;
 	  }
-	 else
+	 else 
 	 if (c == '%')
 	  {
-	   percent = true;
+	   flag = true;
 	   continue;
 	  }
 	}
-   while (c);
-   if (c && percent && fmt)
-   {
-#ifdef _DYNAMIC_
-	       if (pass == 1)
-#endif //_DYNAMIC_
-           {
-	   typelist[n] = fmt;
-	   fmtlist[n] = c;
-               pstr[n] = NULL;
+   while (c && (i < BUFSIZE));
+   if (!c) sfmt--; //poit to '\0'
+   i = 0;
+   flag = false;
+   do
+	{
+	 c = *str++;
+	 if (!flag && (c == '"'))
+	  {
+	   flag = true;
+	   continue;
+	  }
+	 if (flag && (c == '"'))
+	  {
+	   flag = false;
+	   continue;
+	  }
+	 if (!flag && ((c == ',') || (c == '\0'))) //add asterix
+	  {
+	   i = pstr[i] = '\0';
 	   switch (fmt)
-	   {
-	   case tChar:
-		   arglist[n] = (void*)malloc(sizeof(char));
-		   *(char*)arglist[n] = '\0';
-		   pfsize += sizeof(char);
-		   break;
-	   case tShort:
-		   arglist[n] = (void*)malloc(sizeof(short));
-		   *(short*)arglist[n] = 0;
-		   pfsize += sizeof(short);
-		   break;
-	   case tInt:
-		   arglist[n] = (void*)malloc(sizeof(int));
-		   *(int*)arglist[n] = 0;
-		   pfsize += sizeof(int);
-		   break;
-	   case tLong:
-		   arglist[n] = (void*)malloc(sizeof(long));
-		   *(long*)arglist[n] = 0;
-		   pfsize += sizeof(long);
-		   break;
-	   case ti64:
-		   arglist[n] = (void*)malloc(sizeof(__int64));
-		   *(__int64*)arglist[n] = 0;
-		   pfsize += sizeof(__int64);
-		   break;
-	   case tFloat:
-		   arglist[n] = (void*)malloc(sizeof(float));
-		   *(float*)arglist[n] = 0.0;
-		   pfsize += sizeof(float);
-		   break;
-	   case tDouble:
-		   arglist[n] = (void*)malloc(sizeof(double));
-		   *(double*)arglist[n] = 0.0;
-		   pfsize += sizeof(double);
-		   break;
-	   case tExt:
-		   arglist[n] = (void*)malloc(sizeof(long double));
-		   *(long double*)arglist[n] = 0.0;
-		   pfsize += sizeof(long double);
-		   break;
-	   case tString:
-                   char* cp = (char*)malloc(BUFSIZE);
-		   arglist[n] = (void*)malloc(sizeof(char*));
-                   *(char**)arglist[n] = cp;
-                   pstr[n] = cp;
-		   memset(*(char**)arglist[n], 0, BUFSIZE);
-		   pfsize += sizeof(char*);
-		   break;
-	   }
-           }
-	   n++;
-      }
-    } while (c && (n < BUFSIZE));
-   }//end for pass
-
-    arglist[n] = (void*)malloc(sizeof(void*));
-
-    int nn = vsscanf(str, sfmt, (char*)arglist);
-
-    char* fdest = dst;
-    for (int i = 0; (i < n) && arglist[i]; i++)
-    {
-        switch (typelist[i])
-        {
-        case tChar:
-        {
-            char ci = *(char*)arglist[i];
-            char fmt[] = { "%c, \0" };
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ci);
-        }
-        break;
-        case tShort:
-        {
-            short si = *(short*)arglist[i];
-            char fmt[] = { "%hd, \0" };
-            fmt[2] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, si);
-        }
-        break;
-        case tInt:
-        {
-            int ii = *(int*)arglist[i];
-            char fmt[] = { "%d, \0" };
-            fmt[1] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ii);
-        }
-        break;
-        case tLong:
-        {
-            long li = *(long*)arglist[i];
-            char fmt[] = { "%ld, \0" };
-            fmt[2] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, li);
-        }
-        break;
-        case ti64:
-        {
-            __int64 Li = *(__int64*)arglist[i];
-            char fmt[] = { "%Ld, \0" };
-            fmt[2] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, Li);
-        }
-        break;
-        case tFloat:
-        {
-            float ff = *(float*)arglist[i];
-            char fmt[] = { "%f, \0" };
-            fmt[1] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ff);
-        }
-        break;
-        case tDouble:
-        {
-            double df = *(double*)arglist[i];
-            char fmt[] = { "%lf, \0" };
-            fmt[2] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, df);
-        }
-        break;
-        case tExt:
-        {
-            long double lf = *(long double*)arglist[i];
-            char fmt[] = { "%Lf, \0" };
-            fmt[2] = fmtlist[i];
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, lf);
-        }
-        break;
-        case tString:
-        {
-            char* ss = (char*)arglist[i];
-            char fmt[] = { "%s, \0" };
-            fdest += snprintf(fdest, BUFSIZE - (fdest - dst), fmt, ss);
-        }
-        break;
-        }
-    }
-    if (fdest > dst + 2) fdest[-2] = '\0'; //supress last ", "
-
-#ifdef _DYNAMIC_
-    for (int i = 0; i < n; i++)
-#else //_DYNAMIC_
-    for (int i = 0; i < ARGSIZE; i++)
-#endif //_DYNAMIC_
-    {
-        if (pstr[i])
-    {
-            free(pstr[i]);
-            pstr[i] = NULL;
-        }
-        if (arglist[i])
-        {
-            free(arglist[i]);
-            arglist[i] = NULL;
-        }
-    }
-#ifdef _DYNAMIC_
-	 if (arglist) free(arglist);
-     if (typelist) free(typelist);
-     if (fmtlist) free(fmtlist);
-     if (pstr) free(pstr);
-#endif //_DYNAMIC_   
-    return nn;
-}
-//---------------------------------------------------------------------------
-//sprintf test utility function
-void sprtst(char* dst, char* sfmt, char* str)
-{
-    char pfmt[BUFSIZE];
-    char pstr[BUFSIZE];
-    enum ftypes {
-        tNone, tShort, tInt, tLong, tInt64,
-        tFloat, tDouble, tLongDouble, tString, tPtr
-    } fmt;
-    char c = '\0', cc = '\0';
-    int i;
-    bool flag;
-
-    char* pdst = dst; // Новый указатель для отслеживания позиции в dst
-
-    do
-    {
-        i = 0; 
-        flag = false; 
-        fmt = tNone;
-        do
-        {
-            cc = c;
-            c = pfmt[i++] = *sfmt++;
-            pfmt[i] = '\0';
-            if (c == '\0')  break;
-            if (flag)
-            {
-                if (c == '%') 
-                 { 
-                    flag = false; 
-                    continue; 
-                 }
-                else
-                if ((c == 'f') || (c == 'e') || (c == 'E') || (c == 'g') || (c == 'G'))
-                {
-                    if (cc == 'l') fmt = tDouble;
-                    else
-                    if (cc == 'L') fmt = tLongDouble;
-                    else fmt = tFloat;
-                    break;
-                }
-                else
-                if ((c == 'd') || (c == 'i') || (c == 'u') ||
-                    (c == 'x') || (c == 'X') || (c == 'o') || (c == 'c'))
-                {
-                    if (cc == 'l') fmt = tLong;
-                    else
-                    if (cc == 'h') fmt = tShort;
-                    else
-                    if (cc == 'L') fmt = tInt64;
-                    else fmt = tInt;
-                    break;
-                }
-                else
-                if ((c == 'n') || (c == 'p')) 
-                 { 
-                    fmt = tPtr; 
-                    break; 
-                 }
-                else
-                if (c == 's') 
-                 { 
-                    fmt = tString; 
-                    break; 
-                 }
-                else continue;
-            }
-            else
-            if (c == '%') 
-             { 
-                flag = true; 
-                continue; 
-             }
-        } while (c && (i < BUFSIZE));
-        if (!c) sfmt--; //poit to '\0'
-        i = 0; flag = false;
-        do
-        {
-            c = *str++;
-            if (!flag && (c == '"')) 
-            { 
-                flag = true; 
-                continue; 
-            }
-            if (flag && (c == '"')) 
-            { 
-                flag = false; 
-                continue; 
-            }
-            if (!flag && ((c == ',') || (c == '\0'))) //add asterix
-            {
-                i = pstr[i] = '\0';
-                switch (fmt)
-                {
-                case tNone:
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt);
-                    //pdst += sprintf(pdst, pfmt);
-                    break;
-                case tPtr:
-                    strcpy_s(pdst, BUFSIZE - (pdst - dst), pfmt);
-                    pdst += strlen(pfmt);
-                    break;
-                case tInt:
-                {
-                    int l = atol(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
-                }
-                break;
-                case tLong:
-                {
-                    long l = atol(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
-                }
-                break;
-                case tInt64:
-                {
-                    __int64 l = _atoi64(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
-                }
-                break;
-                case tShort:
-                {
-                    short l = (short)atol(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
-                }
-                break;
-                case tFloat:
-                {
-                    float d = (float)atof(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
-                }
-                break;
-                case tDouble:
-                {
-                    double d = (double)atof(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
-                }
-                break;
-                case tLongDouble:
-                {
-                    long double d = (long double)atof(pstr);
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
-                }
-                break;
-                case tString:
-                    pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, pstr);
-                    break;
-                }
-                break;
-            }
-            else pstr[i++] = c;
-        } while (c && (i < BUFSIZE));
-    } while (*sfmt && (i < BUFSIZE));
+		{
+		case tNone:
+		 pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt);
+		 //pdst += sprintf(pdst, pfmt);
+		break;
+		case tPtr:
+		 strcpy_s(pdst, BUFSIZE - (pdst - dst), pfmt);
+		 pdst += strlen(pfmt);
+		break;
+		case tInt:
+		 {
+		  int l = atol(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
+		 }
+		break;
+		case tLong:
+		 {
+		  long l = atol(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
+		 }
+		break;
+		case tInt64:
+		 {
+		  __int64 l = _atoi64(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
+		 }
+		break;
+		case tShort:
+		 {
+		  short l = (short) atol(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, l);
+		 }
+		break;
+		case tFloat:
+		 {
+		  float d = (float) atof(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
+		 }
+		break;
+		case tDouble:
+		 {
+		  double d = (double) atof(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
+		 }
+		break;
+		case tLongDouble:
+		 {
+		  long double d = (long double) atof(pstr);
+		  pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, d);
+		 }
+		break;
+		case tString:
+		 pdst += snprintf(pdst, BUFSIZE - (pdst - dst), pfmt, pstr);
+		break;
+		}
+	   break;
+	  }
+	 else pstr[i++] = c;
+	}
+   while (c && (i < BUFSIZE));
+  }
+ while (*sfmt && (i < BUFSIZE));
 }
 
 //---------------------------------------------------------------------------
