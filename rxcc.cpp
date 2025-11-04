@@ -13,7 +13,7 @@
 
 #define BUFSIZE         4096
 #define ARGSIZE         128
-#define MAXSTRLEN      1024
+#define MAXSTRLEN       1024
 
 //---------------------------------------------------------------------------
 //https://bbs.archlinux.org/viewtopic.php?id=31087
